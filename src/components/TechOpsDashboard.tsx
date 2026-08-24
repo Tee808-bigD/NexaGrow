@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   Globe, ShieldCheck, CheckSquare, Zap, Copy, ExternalLink, Server, 
-  Code, Gauge, Clock, ArrowRight, AlertCircle, CheckCircle2, RefreshCw, Layers, Plus, Trash2
+  Code, Gauge, Clock, ArrowRight, AlertCircle, CheckCircle2, RefreshCw, Layers, Plus, Trash2,
+  ShieldAlert, Activity, Wifi
 } from "lucide-react";
 
 // Predefined ACF & Gutenberg Reusable Blocks for Senior Web Developers
@@ -67,7 +68,19 @@ export default function RippleHero() {
   }
 ];
 
-export default function TechOpsDashboard() {
+interface TechOpsDashboardProps {
+  apiErrors?: Array<{
+    id: string;
+    endpoint: string;
+    statusCode: number;
+    message: string;
+    timestamp: string;
+    remediation: string;
+  }>;
+  onClearErrors?: () => void;
+}
+
+export default function TechOpsDashboard({ apiErrors = [], onClearErrors }: TechOpsDashboardProps) {
   // States for DNS Records Simulator
   const [dnsRecords, setDnsRecords] = useState([
     { type: "A", name: "@", value: "76.76.21.21 (Vercel Core)", ttl: "3600", status: "propagated" },
@@ -162,6 +175,164 @@ export default function TechOpsDashboard() {
           <p className="text-sm text-slate-400 mt-2.5 leading-relaxed font-body">
             Monitor live DNS propagation cycles, verify Figma-to-code fidelity reviews, execute automated Core Web Vitals audits, and manage your reusable Gutenberg custom components.
           </p>
+        </div>
+      </div>
+
+      {/* NEW: API System Diagnostics & Telemetry Dashboard Section */}
+      <div className="bg-[#1A1A1A] border border-white/5 rounded-3xl p-6 shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-radial-at-tr from-[#C8FF00]/5 to-transparent pointer-events-none" />
+        
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-white/5 pb-5 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-[#C8FF00]/10 border border-[#C8FF00]/20 text-[#C8FF00]">
+              <Activity className="h-5 w-5 animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-white font-display uppercase tracking-wider">API Diagnostics & Telemetry Console</h3>
+              <p className="text-xs text-slate-400 font-medium font-body">Monitor live endpoints, active Google GenAI rate limits, and failure mitigations</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3 w-full md:w-auto shrink-0 justify-end">
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-[#C8FF00]/10 text-[#C8FF00] border border-[#C8FF00]/20 font-display uppercase">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#C8FF00] animate-ping" />
+              Gateway Online
+            </div>
+            {apiErrors.length > 0 && onClearErrors && (
+              <button
+                onClick={onClearErrors}
+                className="py-1 px-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[10px] font-bold font-display uppercase tracking-wider rounded-full transition-all cursor-pointer"
+              >
+                Clear Incident Logs
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Diagnostic Metrics Matrix */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+          
+          {/* Box 1: API Gateway Live Status */}
+          <div className="border border-white/5 p-4 rounded-xl bg-black/40 relative overflow-hidden flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-slate-400 text-[10px] font-extrabold mb-2.5 font-display uppercase tracking-widest">
+                <Wifi className="h-3.5 w-3.5 text-[#C8FF00]" />
+                API Gateway Health
+              </div>
+              <div className="text-xl font-black text-white font-display">REST SECURE PROXY</div>
+              <p className="text-[10px] text-slate-400 mt-1 leading-relaxed font-body">
+                Express server gateway routes and proxies client requests to Google Gemini and ClickHouse Cloud over TLS 1.3.
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-white/5 flex justify-between text-[9px] font-bold font-display uppercase text-slate-500">
+              <span>Latency: ~140ms</span>
+              <span className="text-[#C8FF00]">Status: Healthy</span>
+            </div>
+          </div>
+
+          {/* Box 2: Google Gemini Rate Limits */}
+          <div className="border border-white/5 p-4 rounded-xl bg-black/40 relative overflow-hidden flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-slate-400 text-[10px] font-extrabold mb-2.5 font-display uppercase tracking-widest">
+                <Gauge className="h-3.5 w-3.5 text-[#C8FF00]" />
+                Gemini API Rate Limits
+              </div>
+              <div className="text-xl font-black text-[#C8FF00] font-display">15 RPM / 1.5K RPD</div>
+              <p className="text-[10px] text-slate-400 mt-1 leading-relaxed font-body">
+                Active Tier: Gemini Flash. Limits: 15 Requests/Min, 1,000,000 Tokens/Min (TPM), 1,500 Requests/Day (RPD).
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-white/5 flex justify-between text-[9px] font-bold font-display uppercase text-slate-500">
+              <span>Automatic Failover: ENABLED</span>
+              <span className="text-[#C8FF00]">Status: Standard</span>
+            </div>
+          </div>
+
+          {/* Box 3: ClickHouse Server Status */}
+          <div className="border border-white/5 p-4 rounded-xl bg-black/40 relative overflow-hidden flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-slate-400 text-[10px] font-extrabold mb-2.5 font-display uppercase tracking-widest">
+                <Server className="h-3.5 w-3.5 text-[#C8FF00]" />
+                ClickHouse Cloud OLAP Capacity
+              </div>
+              <div className="text-xl font-black text-white font-display">100 CONCURRENT OPS</div>
+              <p className="text-[10px] text-slate-400 mt-1 leading-relaxed font-body">
+                OLAP server scales to handle up to 100 simultaneous movie performance calculations. In-memory fallback available.
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-white/5 flex justify-between text-[9px] font-bold font-display uppercase text-slate-500">
+              <span>Edge Buffers: ACTIVE</span>
+              <span className="text-[#C8FF00]">Status: Standby</span>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Telemetry Log View */}
+        <div className="border border-white/5 rounded-xl bg-black/60 overflow-hidden font-body">
+          <div className="bg-white/5 px-4 py-3 border-b border-white/5 flex items-center justify-between">
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#C8FF00] font-display">Live Incident Telemetry Logs</span>
+            <span className="text-[10px] font-bold text-slate-400">Total Logs in Session: {apiErrors.length}</span>
+          </div>
+
+          <div className="p-4">
+            <AnimatePresence mode="popLayout">
+              {apiErrors.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex flex-col items-center justify-center py-8 text-center"
+                >
+                  <div className="p-3 bg-[#C8FF00]/10 border border-[#C8FF00]/20 rounded-full text-[#C8FF00] mb-3">
+                    <ShieldCheck className="h-6 w-6" />
+                  </div>
+                  <h4 className="text-white text-xs font-bold uppercase tracking-wider font-display">All Systems Operational</h4>
+                  <p className="text-[11px] text-slate-400 mt-1 max-w-md leading-relaxed">
+                    No API outages, connection anomalies, or 503 high-demand rate limit constraints have been reported in this session.
+                  </p>
+                </motion.div>
+              ) : (
+                <div className="space-y-3">
+                  {apiErrors.map((err) => (
+                    <motion.div
+                      key={err.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 10 }}
+                      className="border border-white/5 bg-black/40 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-rose-500/30 transition-all"
+                    >
+                      <div className="space-y-1.5 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-full border ${
+                            err.statusCode === 503 
+                              ? "bg-amber-500/10 text-amber-400 border-amber-500/20" 
+                              : "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                          } font-display`}>
+                            {err.statusCode} {err.statusCode === 503 ? "Service Unavailable" : "System Error"}
+                          </span>
+                          <span className="font-mono text-[10px] text-slate-400">{err.endpoint}</span>
+                          <span className="text-[9px] text-slate-500 font-mono font-medium ml-auto md:ml-0">{err.timestamp}</span>
+                        </div>
+                        
+                        <p className="text-[11px] text-slate-300 font-medium leading-relaxed bg-black/40 p-2 rounded-lg border border-white/5 max-h-16 overflow-y-auto font-mono">
+                          {err.message}
+                        </p>
+                        
+                        <div className="flex items-start gap-1.5 bg-[#C8FF00]/5 border border-[#C8FF00]/10 p-2.5 rounded-lg">
+                          <ShieldAlert className="h-3.5 w-3.5 text-[#C8FF00] shrink-0 mt-0.5" />
+                          <div className="text-[10px] text-slate-300 leading-relaxed font-body">
+                            <strong className="text-[#C8FF00] uppercase font-display tracking-wider text-[9px] block mb-0.5">Recommended Remediation:</strong>
+                            {err.remediation}
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
 

@@ -74,13 +74,21 @@ export default function SqlSandbox({ onRefreshData }: SqlSandboxProps) {
           columns
         });
 
-        // Trigger parent data refresh in case they inserted or updated anything (though sandbox is read-only, it keeps DB in sync)
+        // Trigger parent data refresh in case they inserted or updated anything
         onRefreshData();
       } else {
-        setError(data.error || "Query failed to execute. Check your SQL syntax.");
+        const errMsg = data.error || "Query failed to execute. Check your SQL syntax.";
+        setError(errMsg);
+        window.dispatchEvent(new CustomEvent("api-error", {
+          detail: { endpoint: "/api/clickhouse/query", status: res.status, message: errMsg }
+        }));
       }
     } catch (err: any) {
-      setError(`Network error: ${err.message || err}`);
+      const errMsg = `Network error: ${err.message || err}`;
+      setError(errMsg);
+      window.dispatchEvent(new CustomEvent("api-error", {
+        detail: { endpoint: "/api/clickhouse/query", status: 503, message: errMsg }
+      }));
     } finally {
       setExecuting(false);
     }

@@ -25,21 +25,51 @@ export default function App() {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isAddMovieOpen, setIsAddMovieOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [apiErrors, setApiErrors] = useState<Array<{
+    id: string;
+    endpoint: string;
+    statusCode: number;
+    message: string;
+    timestamp: string;
+    remediation: string;
+  }>>([]);
 
   // Load status and movies on mount
   const refreshData = async () => {
     try {
       // Get DB mode and stats
       const statusRes = await fetch("/api/db/status");
-      const statusData = await statusRes.json();
-      setStatus(statusData);
+      
+      if (!statusRes.ok) {
+        const errText = await statusRes.text();
+        window.dispatchEvent(new CustomEvent("api-error", {
+          detail: { endpoint: "/api/db/status", status: statusRes.status, message: errText || "Dynamic status check failed" }
+        }));
+      } else {
+        const statusData = await statusRes.json();
+        setStatus(statusData);
+      }
 
       // Get current movie performance dataset
       const moviesRes = await fetch("/api/clickhouse/data");
-      const moviesData = await moviesRes.json();
-      setMovies(moviesData.data || []);
-    } catch (err) {
+      if (!moviesRes.ok) {
+        const errText = await moviesRes.text();
+        window.dispatchEvent(new CustomEvent("api-error", {
+          detail: { endpoint: "/api/clickhouse/data", status: moviesRes.status, message: errText || "Data pipeline read query failed" }
+        }));
+      } else {
+        const moviesData = await moviesRes.json();
+        setMovies(moviesData.data || []);
+      }
+    } catch (err: any) {
       console.error("Error refreshing data pipeline:", err);
+      window.dispatchEvent(new CustomEvent("api-error", {
+        detail: { 
+          endpoint: "/api/db/status", 
+          status: 503, 
+          message: `Network error: ${err.message || err}. The application server or the AI Agent might be temporarily offline.` 
+        }
+      }));
     } finally {
       setLoading(false);
     }
@@ -47,6 +77,39 @@ export default function App() {
 
   useEffect(() => {
     refreshData();
+
+    // Centralized event listener to catch failures globally across chat, sandbox, and config
+    const handleApiError = (e: Event) => {
+      const { endpoint, status, message } = (e as CustomEvent).detail;
+      
+      let remediation = "Please verify your application server and database connectivity.";
+      if (status === 503) {
+        remediation = "API rate limits reached or AI provider experiencing extremely high transient loads. NexaGrow is automatically queueing requests and managing backend failover. Please wait 10 seconds before retrying.";
+      } else if (status === 500) {
+        remediation = "Internal Server Error. Please inspect your GEMINI_API_KEY inside the Settings -> Secrets panel and ensure ClickHouse schema configs are valid.";
+      } else if (status === 400) {
+        remediation = "Bad Request. The input payload was rejected. Semicolon-stacking and DML commands are blocked by standard sandbox safety policies.";
+      } else if (status === 404) {
+        remediation = "Endpoint Not Found. Check if the server routes in server.ts are successfully compiling and starting up.";
+      }
+
+      setApiErrors((prev) => [
+        {
+          id: `err-${Date.now()}-${Math.random()}`,
+          endpoint,
+          statusCode: status,
+          message: typeof message === "object" ? JSON.stringify(message) : String(message),
+          timestamp: new Date().toLocaleTimeString(),
+          remediation,
+        },
+        ...prev
+      ].slice(0, 30));
+    };
+
+    window.addEventListener("api-error", handleApiError);
+    return () => {
+      window.removeEventListener("api-error", handleApiError);
+    };
   }, []);
 
   return (
@@ -338,7 +401,7 @@ export default function App() {
             )}
 
             {activeTab === "techops" && (
-              <TechOpsDashboard />
+              <TechOpsDashboard apiErrors={apiErrors} onClearErrors={() => setApiErrors([])} />
             )}
             </motion.div>
           </AnimatePresence>

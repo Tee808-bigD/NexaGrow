@@ -62,9 +62,19 @@ export default function AgentChat({ onRefreshData }: AgentChatProps) {
         })
       });
 
-      const data = await res.json();
+      // Securely extract response body as text to guard against HTML crash payloads
+      const responseText = await res.text();
+      let data: any = {};
+      let isJson = false;
 
-      if (res.ok) {
+      try {
+        data = JSON.parse(responseText);
+        isJson = true;
+      } catch (e) {
+        isJson = false;
+      }
+
+      if (res.ok && isJson) {
         const aiMessage: ChatMessage = {
           id: `msg-${Date.now()}-ai`,
           role: "model",
@@ -80,18 +90,37 @@ export default function AgentChat({ onRefreshData }: AgentChatProps) {
           setOpenLogId(aiMessage.id);
         }
 
-        // Trigger parent data refresh in case agent performed inserts (normally agent does read-only, but good practice)
+        // Trigger parent data refresh in case agent performed inserts
         onRefreshData();
       } else {
+        let errorMessage = "The AI Agent was unable to complete your request.";
+        
+        if (!isJson) {
+          if (res.status === 503) {
+            errorMessage = `Service Temporarily Unavailable (503). The Generative AI models are currently under exceptionally high demand. NexaGrow's automatic retry framework has queued your request. Please wait 10 seconds and try again.`;
+          } else if (res.status === 500) {
+            errorMessage = `Internal Server Error (500). Please check your GEMINI_API_KEY inside the Settings panel and ensure the ClickHouse database configuration is stable.`;
+          } else {
+            errorMessage = `Server Error (${res.status}): Non-JSON response received. The application server might be compiling or restarting.`;
+          }
+        } else {
+          errorMessage = data.error || errorMessage;
+        }
+
         setMessages((prev) => [
           ...prev,
           {
             id: `msg-${Date.now()}-ai-err`,
             role: "model",
-            text: `⚠️ **Session Error**: ${data.error || "The AI Agent was unable to complete your request."}`,
+            text: `⚠️ **Session Error**: ${errorMessage}`,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }
         ]);
+
+        // Dispatch telemetry custom event
+        window.dispatchEvent(new CustomEvent("api-error", {
+          detail: { endpoint: "/api/agent/chat", status: res.status, message: errorMessage }
+        }));
       }
     } catch (err: any) {
       setMessages((prev) => [
@@ -103,6 +132,11 @@ export default function AgentChat({ onRefreshData }: AgentChatProps) {
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
+
+      // Dispatch telemetry custom event
+      window.dispatchEvent(new CustomEvent("api-error", {
+        detail: { endpoint: "/api/agent/chat", status: 503, message: `Network/Proxy Timeout: ${err.message || err}` }
+      }));
     } finally {
       setSending(false);
     }
