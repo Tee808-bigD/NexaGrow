@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .font-display {
+    font-family: 'Syne', sans-serif;
+  }
+  .font-body {
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+}

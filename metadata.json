@@ -1,0 +1,8 @@
+{
+  "name": "Remix ClickHouse AI Query Agent",
+  "description": "Premium dark luxury ClickHouse analytical dashboard & pipeline designed by NexaGrow.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
