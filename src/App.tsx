@@ -129,6 +129,7 @@ export default function App() {
             whileHover={{ scale: 1.01 }}
             transition={{ type: "spring", stiffness: 400, damping: 20 }}
           >
+            <img src="/src/assets/images/nexagrow_logo_1787579598825.jpg" alt="NexaGrow Logo" className="h-7 w-7 rounded-lg object-cover border border-[#C8FF00]/30" referrerPolicy="no-referrer" />
             <div className="text-xl font-extrabold tracking-tight font-display text-white">
               Nexa<span className="text-[#C8FF00]">Grow</span>
             </div>
