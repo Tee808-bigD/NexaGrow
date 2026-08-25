@@ -55,9 +55,9 @@ CLICKHOUSE_PORT=8443
 1. **Clone the Repository**:
    ```bash
    git clone https://github.com/Tee808-bigD/NexaGrow.git
-   live link: https://nexagrow.onrender.com/
    cd NexaGrow
    ```
+live link: https://nexagrow.onrender.com/
 
 2. **Install Dependencies**:
    ```bash
