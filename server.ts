@@ -701,7 +701,9 @@ app.post("/api/agent/chat", async (req, res) => {
       "meta/llama-3-8b-instruct"
     ];
 
-    const modelsToTry = dynamicModels.length > 0 ? [...dynamicModels, ...fallbackModels] : fallbackModels;
+    // Limit models to try to a maximum of 3 highly-rated models to guarantee instant response times and prevent sequential timeouts
+    const uniqueModels = Array.from(new Set(dynamicModels.length > 0 ? [...dynamicModels, ...fallbackModels] : fallbackModels));
+    const modelsToTry = uniqueModels.slice(0, 3);
 
     let lastError: any = null;
     for (const modelName of modelsToTry) {
