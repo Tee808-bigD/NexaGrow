@@ -643,9 +643,10 @@ app.post("/api/agent/chat", async (req, res) => {
     }
 
     const modelsToTry = [
+      "meta/llama-3.3-70b-instruct",
+      "nvidia/llama-3.1-nemotron-70b-instruct",
       "nvidia/llama-3.1-nemotron-51b-instruct",
-      "meta/llama-3.1-70b-instruct",
-      "meta/llama-3.1-405b-instruct"
+      "meta/llama-3.1-8b-instruct"
     ];
 
     let lastError: any = null;
