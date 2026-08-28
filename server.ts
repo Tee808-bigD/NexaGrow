@@ -642,12 +642,66 @@ app.post("/api/agent/chat", async (req, res) => {
       }
     }
 
-    const modelsToTry = [
+    let dynamicModels: string[] = [];
+    try {
+      console.log("[AI Agent] Fetching active models from NVIDIA Catalog...");
+      const modelsResponse = await fetch("https://integrate.api.nvidia.com/v1/models", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`
+        }
+      });
+      if (modelsResponse.ok) {
+        const modelsData = await modelsResponse.json();
+        if (modelsData && Array.isArray(modelsData.data)) {
+          const availableIds = modelsData.data.map((m: any) => m.id);
+          console.log(`[AI Agent] Total models found in catalog: ${availableIds.length}`);
+          
+          const candidates = availableIds.filter((id: string) => {
+            const lower = id.toLowerCase();
+            return (lower.includes("llama") || lower.includes("nemotron") || lower.includes("deepseek") || lower.includes("mistral")) &&
+                   !lower.includes("vision") &&
+                   !lower.includes("rerank") &&
+                   !lower.includes("embed") &&
+                   !lower.includes("safety") &&
+                   !lower.includes("guard");
+          });
+          
+          if (candidates.length > 0) {
+            candidates.sort((a: string, b: string) => {
+              const score = (id: string) => {
+                const lower = id.toLowerCase();
+                if (lower.includes("llama-3.3-70b")) return 10;
+                if (lower.includes("llama-3.1-nemotron-70b")) return 9;
+                if (lower.includes("llama-3.1-405b")) return 8;
+                if (lower.includes("llama-3.1-70b")) return 7;
+                if (lower.includes("llama-3.1-nemotron-51b")) return 6;
+                if (lower.includes("deepseek-r1") || lower.includes("deepseek-v3")) return 5;
+                if (lower.includes("llama-3.2-11b")) return 4;
+                if (lower.includes("llama-3-70b")) return 3;
+                if (lower.includes("llama-3-8b")) return 2;
+                return 0;
+              };
+              return score(b) - score(a);
+            });
+            dynamicModels = candidates;
+            console.log(`[AI Agent] Filtered and ranked candidates:`, dynamicModels.slice(0, 5));
+          }
+        }
+      }
+    } catch (e) {
+      console.error("[AI Agent] Failed to dynamically query NVIDIA models: ", e);
+    }
+
+    const fallbackModels = [
       "meta/llama-3.3-70b-instruct",
       "nvidia/llama-3.1-nemotron-70b-instruct",
       "nvidia/llama-3.1-nemotron-51b-instruct",
-      "meta/llama-3.1-8b-instruct"
+      "meta/llama-3-70b-instruct",
+      "meta/llama-3-8b-instruct"
     ];
+
+    const modelsToTry = dynamicModels.length > 0 ? [...dynamicModels, ...fallbackModels] : fallbackModels;
 
     let lastError: any = null;
     for (const modelName of modelsToTry) {
