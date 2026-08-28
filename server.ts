@@ -602,8 +602,15 @@ async function executeAgentTool(name: string, args: any) {
   } else if (name === "web_search_movies") {
     const query = args.query;
     try {
-      console.log(`[AI Agent Tool] Performing live Wikipedia search for: "${query}"`);
-      const openSearchRes = await fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(query)}&limit=1&namespace=0&format=json`);
+      // Intelligent Query Cleansing: strip standard search operators/metadata to get the exact movie title
+      let cleanQuery = query
+        .replace(/budget|box office|revenue|statistics|details|reviews|wikipedia|wiki|(\b\d{4}\b)|film/gi, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!cleanQuery) cleanQuery = query;
+
+      console.log(`[AI Agent Tool] Performing live Wikipedia search for: "${cleanQuery}" (original: "${query}")`);
+      const openSearchRes = await fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(cleanQuery)}&limit=1&namespace=0&format=json`);
       if (openSearchRes.ok) {
         const searchData = await openSearchRes.json();
         const titles = searchData[1];
@@ -627,7 +634,7 @@ async function executeAgentTool(name: string, args: any) {
           }
         }
       }
-      return { message: `No real-time results found for '${query}'.` };
+      return { message: `No real-time results found for '${cleanQuery}'.` };
     } catch (e: any) {
       return { error: `Web search execution failed: ${e.message}` };
     }
@@ -950,9 +957,9 @@ app.post("/api/agent/chat", async (req, res) => {
       "meta/llama-3-8b-instruct"
     ];
 
-    // Limit models to try to a maximum of 3 highly-rated models to guarantee instant response times and prevent sequential timeouts
+    // Try all unique candidate and fallback models to guarantee that we find a working one for the user's specific NIM account, even if it is slower
     const uniqueModels = Array.from(new Set(dynamicModels.length > 0 ? [...dynamicModels, ...fallbackModels] : fallbackModels));
-    const modelsToTry = uniqueModels.slice(0, 3);
+    const modelsToTry = uniqueModels;
 
     let lastError: any = null;
     for (const modelName of modelsToTry) {
