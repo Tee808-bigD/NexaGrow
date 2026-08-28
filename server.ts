@@ -702,7 +702,7 @@ async function executeAgentTool(name: string, args: any) {
 
 // AI Agent Conversation Controller
 app.post("/api/agent/chat", async (req, res) => {
-  const { message, history } = req.body;
+  const { message, history, forceError } = req.body;
 
   if (!message) {
     return res.status(400).json({ error: "Missing chat message." });
@@ -1064,6 +1064,9 @@ app.post("/api/agent/chat", async (req, res) => {
   }
 
   try {
+    if (forceError) {
+      throw new Error("Simulated NVIDIA NIM HTTP 404: Function not found for account 'Q23RjpqSfn8...'");
+    }
     let response = await generateWithRetry(contents);
 
     let functionCalls = response.functionCalls;
