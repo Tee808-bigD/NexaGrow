@@ -1,6 +1,6 @@
 # 🎬 STUDIO INTELLIGENCE TEST SUITE REPORT
 
-Generated: 2026-08-28T19:08:17.486Z
+Generated: 2026-08-28T19:15:34.385Z
 
 ## 🧪 1. UNIT TESTING
 - **PASS**: SQL Validator: Permit read-only SELECT 
@@ -15,7 +15,7 @@ Generated: 2026-08-28T19:08:17.486Z
 - **PASS**: ROI Simulation: Comedy streaming projections simulated correctly _(Streaming views: 60750000)_
 
 ## ⚡ 3. PERFORMANCE & LATENCY BENCHMARKING
-- **PASS**: Performance: Local Analytical engine execution average latency < 1.0ms _(Average Latency: 0.035ms for 200 aggregate group-by loops)_
+- **PASS**: Performance: Local Analytical engine execution average latency < 1.0ms _(Average Latency: 0.040ms for 200 aggregate group-by loops)_
 
 ## 🌐 4. SIMULATED END-TO-END ROUTE INTEGRATION
 - **PASS**: API Security: NVIDIA API key configuration detected & validated safely 
@@ -25,4 +25,4 @@ Generated: 2026-08-28T19:08:17.486Z
 - **Total Assertions**: 11
 - **Successful Passes**: 11
 - **Status**: 🏆 ALL GREEN
-- **Benchmark Avg Latency**: 0.0350 ms
+- **Benchmark Avg Latency**: 0.0400 ms
