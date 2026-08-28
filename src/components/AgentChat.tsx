@@ -8,10 +8,10 @@ interface AgentChatProps {
 }
 
 const CONVERSATION_SUGGESTIONS = [
+  "Search Wikipedia for Dune Part Two and add it to our database",
+  "Simulate a Sci-Fi movie with a $150M budget and hybrid release track",
   "Which genre has the highest average ROI?",
-  "Recommend a film release strategy based on sentiment and views.",
-  "Which movies are our high-budget risks vs high-profit blockbusters?",
-  "Compare total box office revenues against streaming views."
+  "Compare total box office revenues against streaming views"
 ];
 
 export default function AgentChat({ onRefreshData }: AgentChatProps) {

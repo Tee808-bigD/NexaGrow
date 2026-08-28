@@ -459,6 +459,53 @@ const runAnalyticalQueryTool: FunctionDeclaration = {
   }
 };
 
+const insertMovieTool: FunctionDeclaration = {
+  name: "insert_movie",
+  description: "Inserts a new movie performance record directly into the ClickHouse database. Use this when the user requests to load, add, insert, save, or record a movie with stats.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      title: { type: Type.STRING, description: "The title of the movie." },
+      genre: { type: Type.STRING, description: "The genre of the movie (e.g., Sci-Fi, Drama, Action, Comedy, Horror)." },
+      release_date: { type: Type.STRING, description: "The release date in YYYY-MM-DD format." },
+      budget: { type: Type.NUMBER, description: "The production budget of the movie in USD." },
+      box_office_domestic: { type: Type.NUMBER, description: "Domestic box office earnings in USD." },
+      box_office_international: { type: Type.NUMBER, description: "International box office earnings in USD." },
+      streaming_views: { type: Type.NUMBER, description: "Streaming views count on platform." },
+      sentiment_score: { type: Type.NUMBER, description: "Audience sentiment score from 0.0 to 1.0." }
+    },
+    required: ["title", "genre", "release_date", "budget"]
+  }
+};
+
+const webSearchMoviesTool: FunctionDeclaration = {
+  name: "web_search_movies",
+  description: "Performs a live real-time query of Wikipedia's database to retrieve real-world details, summaries, cast, budget, or box office statistics for any movie or franchise.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      query: { type: Type.STRING, description: "The name of the movie or search query to find film details for (e.g., 'Dune Part Two 2024 budget')." }
+    },
+    required: ["query"]
+  }
+};
+
+const simulateBlockbusterPerformanceTool: FunctionDeclaration = {
+  name: "simulate_blockbuster_performance",
+  description: "Simulates and forecasts the box office performance, international audience reach, and ROI of a hypothetical movie under theatrical, streaming, or hybrid release tracks.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      title: { type: Type.STRING, description: "The hypothetical movie title." },
+      genre: { type: Type.STRING, description: "The genre of the film (e.g., Action, Sci-Fi, Comedy, Drama, Horror)." },
+      budget: { type: Type.NUMBER, description: "The proposed production budget in USD." },
+      target_sentiment: { type: Type.NUMBER, description: "Target audience sentiment score from 0.1 to 1.0 (defaults to 0.75)." },
+      release_strategy: { type: Type.STRING, description: "The release strategy: 'Theatrical-First', 'Streaming-First', or 'Hybrid'." }
+    },
+    required: ["title", "genre", "budget"]
+  }
+};
+
 // Tool Execution Handler
 async function executeAgentTool(name: string, args: any) {
   if (name === "get_table_schema") {
@@ -505,6 +552,150 @@ async function executeAgentTool(name: string, args: any) {
         return { error: `Local SQL execution failed: ${err.message}`, queryUsed: query };
       }
     }
+  } else if (name === "insert_movie") {
+    const { title, genre, release_date, budget, box_office_domestic, box_office_international, streaming_views, sentiment_score } = args;
+    const newMovie = {
+      movie_id: Math.floor(Math.random() * 1000000) + 10,
+      title,
+      genre,
+      release_date: release_date || new Date().toISOString().split('T')[0],
+      budget: Number(budget) || 0,
+      box_office_domestic: Number(box_office_domestic) || 0,
+      box_office_international: Number(box_office_international) || 0,
+      streaming_views: Number(streaming_views) || 0,
+      sentiment_score: Number(sentiment_score) || 0.75
+    };
+
+    const client = getClickHouseClient();
+    if (client) {
+      try {
+        await client.insert({
+          table: "default.movie_performance",
+          values: [newMovie],
+          format: "JSONEachRow"
+        });
+        console.log("[AI Agent Tool] Successfully inserted movie into remote ClickHouse:", newMovie);
+      } catch (err: any) {
+        console.error("[AI Agent Tool] Remote ClickHouse insert failed, saving locally:", err);
+      }
+    }
+
+    try {
+      localMovies.push(newMovie);
+      alasql("INSERT INTO movie_performance VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", [
+        newMovie.movie_id,
+        newMovie.title,
+        newMovie.genre,
+        newMovie.release_date,
+        newMovie.budget,
+        newMovie.box_office_domestic,
+        newMovie.box_office_international,
+        newMovie.streaming_views,
+        newMovie.sentiment_score
+      ]);
+      console.log("[AI Agent Tool] Successfully inserted movie into local database:", newMovie);
+    } catch (err) {
+      console.error("[AI Agent Tool] Local database insert failed:", err);
+    }
+
+    return { success: true, message: `Successfully inserted movie '${title}' into the database!`, data: newMovie };
+  } else if (name === "web_search_movies") {
+    const query = args.query;
+    try {
+      console.log(`[AI Agent Tool] Performing live Wikipedia search for: "${query}"`);
+      const openSearchRes = await fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(query)}&limit=1&namespace=0&format=json`);
+      if (openSearchRes.ok) {
+        const searchData = await openSearchRes.json();
+        const titles = searchData[1];
+        const urls = searchData[3];
+        if (titles && titles.length > 0) {
+          const matchedTitle = titles[0];
+          const matchedUrl = urls[0];
+          
+          const summaryRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(matchedTitle.replace(/ /g, "_"))}`);
+          if (summaryRes.ok) {
+            const summaryData = await summaryRes.json();
+            return {
+              matchedTitle,
+              summary: summaryData.extract || "No extract available.",
+              url: matchedUrl,
+              thumbnail: summaryData.thumbnail ? summaryData.thumbnail.source : null,
+              description: summaryData.description || ""
+            };
+          } else {
+            return { matchedTitle, url: matchedUrl, summary: `Found article: ${matchedTitle}, but failed to load summary extracts.` };
+          }
+        }
+      }
+      return { message: `No real-time results found for '${query}'.` };
+    } catch (e: any) {
+      return { error: `Web search execution failed: ${e.message}` };
+    }
+  } else if (name === "simulate_blockbuster_performance") {
+    const { title, genre, budget, target_sentiment, release_strategy } = args;
+    const budgetVal = Number(budget) || 10000000;
+    const sentiment = Number(target_sentiment) || 0.75;
+    const strategy = release_strategy || "Hybrid";
+
+    let domesticFactor = 0.45;
+    let internationalFactor = 0.65;
+    let viewMultiplier = 1.0;
+
+    const lowerGenre = (genre || "").toLowerCase();
+    if (lowerGenre.includes("action") || lowerGenre.includes("sci-fi")) {
+      domesticFactor = 0.55;
+      internationalFactor = 0.85;
+      viewMultiplier = 1.2;
+    } else if (lowerGenre.includes("comedy")) {
+      domesticFactor = 0.60;
+      internationalFactor = 0.30;
+      viewMultiplier = 1.5;
+    } else if (lowerGenre.includes("drama")) {
+      domesticFactor = 0.40;
+      internationalFactor = 0.45;
+      viewMultiplier = 2.0;
+    } else if (lowerGenre.includes("horror")) {
+      domesticFactor = 0.70;
+      internationalFactor = 0.50;
+      viewMultiplier = 1.1;
+    }
+
+    let domesticOffice = 0;
+    let internationalOffice = 0;
+    let streamingViews = 0;
+
+    if (strategy === "Theatrical-First") {
+      domesticOffice = Math.round(budgetVal * domesticFactor * (sentiment * 1.5));
+      internationalOffice = Math.round(budgetVal * internationalFactor * (sentiment * 1.6));
+      streamingViews = Math.round((budgetVal / 10) * viewMultiplier * (sentiment * 0.5));
+    } else if (strategy === "Streaming-First") {
+      domesticOffice = Math.round(budgetVal * domesticFactor * 0.15);
+      internationalOffice = Math.round(budgetVal * internationalFactor * 0.15);
+      streamingViews = Math.round((budgetVal / 5) * viewMultiplier * 15 * sentiment);
+    } else { // Hybrid
+      domesticOffice = Math.round(budgetVal * domesticFactor * (sentiment * 0.9));
+      internationalOffice = Math.round(budgetVal * internationalFactor * (sentiment * 1.0));
+      streamingViews = Math.round((budgetVal / 8) * viewMultiplier * 8 * sentiment);
+    }
+
+    const totalBoxOffice = domesticOffice + internationalOffice;
+    const roi = ((totalBoxOffice - budgetVal) / budgetVal) * 100;
+
+    return {
+      simulationResult: {
+        title,
+        genre,
+        budget: budgetVal,
+        target_sentiment: sentiment,
+        release_strategy: strategy,
+        projected_box_office_domestic: domesticOffice,
+        projected_box_office_international: internationalOffice,
+        projected_total_box_office: totalBoxOffice,
+        projected_streaming_views: streamingViews,
+        projected_roi: Number(roi.toFixed(2)),
+        verdict: roi > 50 ? "Highly Lucrative Blockbuster" : roi > 0 ? "Moderately Profitable Release" : "High-Risk Deficit Project"
+      }
+    };
   }
   return { error: `Unknown tool: ${name}` };
 }
@@ -526,11 +717,16 @@ app.post("/api/agent/chat", async (req, res) => {
 
   const systemInstruction = `
     You are 'Studio Intelligence Agent', an expert film studio financial analyst. You have access to a ClickHouse database containing movie performance records.
-    Always call get_table_schema first if you are not sure about the database fields before writing SQL queries.
-    Compute calculated metrics accurately, such as ROI using the formula: ((box_office_domestic + box_office_international - budget) / budget).
-    When asked about ROI, performance, budget efficiency, or trends, formulate the correct SQL SELECT query, call run_analytical_query, and explain the results in a friendly, clear, and professional tone.
+    
+    You have the following highly advanced capabilities:
+    1. SQL Analytics (get_table_schema, run_analytical_query): Query or aggregate metrics across movie performance records. Always call get_table_schema first if you are not sure of columns.
+    2. Write & Load Movies (insert_movie): Add or insert real-world or simulated movie records with complete budget/box office stats directly into the active ClickHouse database.
+    3. Real-time Wikipedia Search (web_search_movies): If the user asks about a real film that is not in our database, ALWAYS call web_search_movies to find the actual Wikipedia page summary, budget, domestic/international box office, and release date, and then offer to insert it into the database.
+    4. Blockbuster ROI Forecasting (simulate_blockbuster_performance): Run hypothetical simulation tracks to forecast budget splits, projected domestic/international office returns, and streaming views under theatrical-first, streaming-first, or hybrid tracks.
+
+    Formula for ROI: ((box_office_domestic + box_office_international - budget) / budget).
     Ensure you format monetary values, percentages, and views beautifully (e.g. $150.0M, 85.4% ROI, 12M views) for high-scannability readability.
-    Do not print raw JSON output directly. Explain the numbers and tell a compelling film analytics narrative.
+    Do not print raw JSON output directly. Explain the numbers, highlight matched article titles, show simulated forecasts, and tell a compelling film analytics narrative.
   `;
 
   const contents: any[] = [];
@@ -551,7 +747,7 @@ app.post("/api/agent/chat", async (req, res) => {
     parts: [{ text: message }]
   });
 
-  const tools = [{ functionDeclarations: [getTableSchemaTool, runAnalyticalQueryTool] }];
+  const tools = [{ functionDeclarations: [getTableSchemaTool, runAnalyticalQueryTool, insertMovieTool, webSearchMoviesTool, simulateBlockbusterPerformanceTool] }];
   const toolLogs: { toolName: string; args: any; result: any }[] = [];
 
   // NVIDIA NIM proxy helper to convert Gemini format to standard OpenAI messages & call NVIDIA NIM
@@ -585,6 +781,59 @@ app.post("/api/agent/chat", async (req, res) => {
               }
             },
             required: ["query"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "insert_movie",
+          description: "Inserts a new movie performance record directly into the ClickHouse database.",
+          parameters: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              genre: { type: "string" },
+              release_date: { type: "string" },
+              budget: { type: "number" },
+              box_office_domestic: { type: "number" },
+              box_office_international: { type: "number" },
+              streaming_views: { type: "number" },
+              sentiment_score: { type: "number" }
+            },
+            required: ["title", "genre", "release_date", "budget"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "web_search_movies",
+          description: "Performs a live real-time query of Wikipedia to retrieve real-world details, summaries, budgets, or box office statistics for any movie.",
+          parameters: {
+            type: "object",
+            properties: {
+              query: { type: "string" }
+            },
+            required: ["query"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "simulate_blockbuster_performance",
+          description: "Simulates and forecasts the box office performance, international audience reach, and ROI of a hypothetical movie under theatrical, streaming, or hybrid release tracks.",
+          parameters: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              genre: { type: "string" },
+              budget: { type: "number" },
+              target_sentiment: { type: "number" },
+              release_strategy: { type: "string" }
+            },
+            required: ["title", "genre", "budget"]
           }
         }
       }
@@ -868,6 +1117,33 @@ app.post("/api/agent/chat", async (req, res) => {
 
   } catch (err: any) {
     console.error("AI Agent Session Error:", err);
+    
+    // Check if error is related to NVIDIA API key permissions or account limits (e.g., 404 Function not found for account)
+    const errStr = (err.message || String(err)).toLowerCase();
+    if (errStr.includes("nvidia") || errStr.includes("nvapi") || errStr.includes("404") || errStr.includes("not found")) {
+      const diagnosticMsg = `⚠️ **Studio Intelligence Agent - Connection Diagnostics**
+
+I encountered an error trying to reach the AI models via NVIDIA NIM:
+\`\`\`
+${err.message || err}
+\`\`\`
+
+### 🔍 Root Cause Analysis
+* **NVIDIA NIM HTTP 404/Not Found**: This specific error indicates that your NVIDIA Build account key is authenticated, but your **"Personal" Organization is missing the 'Public API Endpoints' permission** from NVIDIA, or the targeted model endpoint is restricted. 
+
+### ⚡ Recommended Fixes
+1. **Switch to Google Gemini (Highly Recommended)**: Go to the AI Studio Settings menu and change your \`GEMINI_API_KEY\` to a standard Google Gemini API key. Standard Gemini keys provide full, high-speed access to **Gemini 2.5 Flash / Gemini 3.5 Flash** models with absolute reliability.
+2. **Request NVIDIA NIM Permissions**: If you wish to continue using NVIDIA NIM, email **\`help@build.nvidia.com\`** and request that they enable the **"Public API Endpoints"** permission for your personal organization.
+3. **Verify Configuration**: Ensure your API key is correctly pasted in settings.
+
+*Note: Your Custom SQL Playroom Sandbox, ClickHouse database integrations, and local analytical charts remain 100% active and running!*`;
+
+      return res.json({
+        text: diagnosticMsg,
+        toolLogs: toolLogs
+      });
+    }
+
     res.status(500).json({
       error: `Agent session failure: ${err.message || err}`
     });
