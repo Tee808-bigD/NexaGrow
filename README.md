@@ -90,3 +90,10 @@ To deploy NexaGrow to Render as a full-stack **Web Service** with zero downtime:
      ```
 3. Set your **Environment Variables** (specifically `GEMINI_API_KEY` and optionally ClickHouse cloud credentials) in the **Environment** settings tab.
 4. Click **Deploy Web Service**!
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+

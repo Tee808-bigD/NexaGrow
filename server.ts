@@ -927,15 +927,17 @@ app.post("/api/agent/chat", async (req, res) => {
             candidates.sort((a: string, b: string) => {
               const score = (id: string) => {
                 const lower = id.toLowerCase();
-                if (lower.includes("llama-3.3-70b")) return 10;
+                if (lower.includes("nemotron-3.5-lightning")) return 15;
+                if (lower.includes("deepseek-v4-pro")) return 14;
+                if (lower.includes("deepseek-v4-flash")) return 13;
+                if (lower.includes("deepseek-v3") || lower.includes("deepseek-r1")) return 12;
+                if (lower.includes("llama-3.1-70b")) return 11;
+                if (lower.includes("llama-3.1-405b")) return 10;
                 if (lower.includes("llama-3.1-nemotron-70b")) return 9;
-                if (lower.includes("llama-3.1-405b")) return 8;
-                if (lower.includes("llama-3.1-70b")) return 7;
-                if (lower.includes("llama-3.1-nemotron-51b")) return 6;
-                if (lower.includes("deepseek-r1") || lower.includes("deepseek-v3")) return 5;
-                if (lower.includes("llama-3.2-11b")) return 4;
-                if (lower.includes("llama-3-70b")) return 3;
-                if (lower.includes("llama-3-8b")) return 2;
+                if (lower.includes("llama-3.1-nemotron-51b")) return 8;
+                if (lower.includes("llama-3.2-11b")) return 7;
+                if (lower.includes("llama-3-70b")) return 6;
+                if (lower.includes("llama-3-8b")) return 5;
                 return 0;
               };
               return score(b) - score(a);
@@ -950,11 +952,13 @@ app.post("/api/agent/chat", async (req, res) => {
     }
 
     const fallbackModels = [
-      "meta/llama-3.3-70b-instruct",
+      "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "deepseek-ai/deepseek-v4-pro-0813",
+      "deepseek-ai/deepseek-v4-flash-0731",
+      "deepseek-ai/deepseek-v3",
+      "meta/llama-3.1-70b-instruct",
       "nvidia/llama-3.1-nemotron-70b-instruct",
-      "nvidia/llama-3.1-nemotron-51b-instruct",
-      "meta/llama-3-70b-instruct",
-      "meta/llama-3-8b-instruct"
+      "nvidia/llama-3.1-nemotron-51b-instruct"
     ];
 
     // Try all unique candidate and fallback models to guarantee that we find a working one for the user's specific NIM account, even if it is slower
